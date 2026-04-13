@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Ranking de Tiempos - Carreras</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        .search-box input {
+            flex: 1;
+            max-width: 300px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .search-box button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .search-box button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #666;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .medal {
+            font-size: 20px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                font-size: 12px;
+            }
+
+            td,
+            th {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🏁 Ranking de Tiempos</h1>
+        <p class="subtitle">Los mejores tiempos registrados en carrera</p>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre..."
+                onkeypress="if(event.key === 'Enter') searchTimes()">
+            <button onclick="searchTimes()">Buscar</button>
+            <button onclick="loadAllTimes()">Mostrar todos</button>
+        </div>
+
+        <div class="stats" id="stats"></div>
+
+        <table id="timesTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>👤 Nombre</th>
+                    <th>🏆 Mejor Vuelta</th>
+                    <th>⏱️ Tiempo Total</th>
+                    <th>🚗 Coche</th>
+                    <th>🗺️ Mapa</th>
+                    <th>📅 Fecha</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr class="no-data">
+                    <td colspan="7">Cargando datos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        async function loadAllTimes() {
+            try {
+                showLoading();
+                const response = await fetch(`${API_URL}/times`);
+                const data = await response.json();
+                renderTable(data);
+                updateStats(data);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('tableBody').innerHTML =
+                    '<tr class="no-data"><td colspan="7">❌ Error al conectar con el servidor. ¿Está ejecutándose?</td></tr>';
+            }
+        }
+
+        async function searchTimes() {
+            const name = document.getElementById('searchInput').value.trim();
+            if (!name) {
+                loadAllTimes();
+                return;
+            }
+
+            try {
+                showLoading();
+                const response = await fetch(`${API_URL}/search/${encodeURIComponent(name)}`);
+                const data = await response.json();
+                renderTable(data);
+                updateStats(data);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function renderTable(times) {
+            const tbody = document.getElementById('tableBody');
+
+            if (!times || times.length === 0) {
+                tbody.innerHTML = '<tr class="no-data"><td colspan="7">📭 No hay tiempos registrados aún</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            times.forEach((t, index) => {
+                const row = document.createElement('tr');
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+
+                row.innerHTML = `
+                    <td style="font-weight: bold;">${medal}</td>
+                    <td><strong>${escapeHtml(t.nombre)}</strong></td>
+                    <td style="color: #4CAF50; font-weight: bold;">${t.mejor_vuelta}</td>
+                    <td>${t.tiempo_total}</td>
+                    <td>${escapeHtml(t.coche)}</td>
+                    <td>${escapeHtml(t.mapa)}</td>
+                    <td style="font-size: 12px;">${formatDate(t.fecha_guardado)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateStats(times) {
+            const stats = document.getElementById('stats');
+            if (times && times.length > 0) {
+                stats.innerHTML = `📊 Total de pilotos registrados: <strong>${times.length}</strong>`;
+            } else {
+                stats.innerHTML = '📊 No hay datos para mostrar';
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('tableBody').innerHTML =
+                '<tr class="no-data"><td colspan="7">⏳ Cargando...</td></tr>';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('es-ES');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return 'N/A';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Cargar datos al abrir la página
+        loadAllTimes();
+
+        // Actualizar cada 30 segundos
+        setInterval(loadAllTimes, 30000);
+    </script>
+</body>
+
+</html>
