@@ -17,8 +17,37 @@
                 <h1>Ranking de <span>Tiempos</span></h1>
                 <p>Mejores registros en carrera</p>
             </div>
-            <div class="stats-badge" id="stats">Cargando...</div>
+            <div class="header-right">
+                <div id="userSection">
+                    <button class="btn-auth" onclick="openModal()">Registrar / Entrar</button>
+                </div>
+                <div class="stats-badge" id="stats">Cargando...</div>
+            </div>
         </header>
+
+        <!-- Modal de Autenticación -->
+        <div id="authModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('login')">Entrar</button>
+                    <button class="tab-btn" onclick="switchTab('register')">Registrarse</button>
+                </div>
+                
+                <form id="authForm" onsubmit="handleAuth(event)">
+                    <div class="form-group">
+                        <label for="username">Usuario</label>
+                        <input type="text" id="username" required placeholder="Tu nombre de piloto">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" id="password" required placeholder="******">
+                    </div>
+                    <button type="submit" id="submitBtn" class="btn-primary">Entrar</button>
+                    <p id="authMessage" class="auth-message"></p>
+                </form>
+            </div>
+        </div>
 
         <div class="controls">
             <div class="control-group">

@@ -11,7 +11,100 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('searchInput').addEventListener('input', applyFilters);
     document.getElementById('filterMap').addEventListener('change', applyFilters);
     document.getElementById('filterCar').addEventListener('change', applyFilters);
+
+    checkSession();
 });
+
+// ─── Authentication ──────────────────────────────────────────────────────────
+
+let currentMode = 'login';
+
+function openModal() {
+    document.getElementById('authModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('authModal').style.display = 'none';
+    document.getElementById('authMessage').textContent = '';
+}
+
+function switchTab(mode) {
+    currentMode = mode;
+    const btns = document.querySelectorAll('.tab-btn');
+    btns[0].classList.toggle('active', mode === 'login');
+    btns[1].classList.toggle('active', mode === 'register');
+    document.getElementById('submitBtn').textContent = mode === 'login' ? 'Entrar' : 'Registrarse';
+}
+
+async function handleAuth(event) {
+    event.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const msgEl = document.getElementById('authMessage');
+
+    const endpoint = currentMode === 'login' ? '/login' : '/register';
+
+    try {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            msgEl.className = 'auth-message success';
+            msgEl.textContent = data.message;
+            
+            if (currentMode === 'login') {
+                localStorage.setItem('driverName', data.username);
+                setTimeout(() => {
+                    closeModal();
+                    updateUserUI(data.username);
+                }, 1000);
+            } else {
+                // Switch to login after registration
+                setTimeout(() => switchTab('login'), 1500);
+            }
+        } else {
+            msgEl.className = 'auth-message error';
+            msgEl.textContent = data.error || 'Error en la operación';
+        }
+    } catch (error) {
+        msgEl.className = 'auth-message error';
+        msgEl.textContent = 'Error de conexión con el servidor';
+    }
+}
+
+function checkSession() {
+    const name = localStorage.getItem('driverName');
+    if (name) updateUserUI(name);
+}
+
+function updateUserUI(name) {
+    const userSection = document.getElementById('userSection');
+    userSection.innerHTML = `
+        <div class="user-info">
+            <span>🏁 ${name}</span>
+            <button class="btn-logout" onclick="logout()">Salir</button>
+        </div>
+    `;
+}
+
+async function logout() {
+    const username = localStorage.getItem('driverName');
+    try {
+        await fetch(`${API_URL}/logout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+    } catch (e) {}
+
+    localStorage.removeItem('driverName');
+    location.reload();
+}
 
 // ─── Data fetching ───────────────────────────────────────────────────────────
 
