@@ -186,15 +186,15 @@ function renderTable(times) {
         return;
     }
 
-    const rows = times.map((t, index) => {
-        const posLabel = index === 0 ? '1'
-            : index === 1 ? '2'
-                : index === 2 ? '3'
-                    : String(index + 1);
+    const rows = times.map((t) => {
+        const posLabel = t.rank_total === 1 ? '🥇 1'
+            : t.rank_total === 2 ? '🥈 2'
+                : t.rank_total === 3 ? '🥉 3'
+                    : String(t.rank_total);
 
         return `
       <tr>
-        <td>${posLabel}</td>
+        <td class="rank-cell">${posLabel}</td>
         <td>${escapeHtml(t.nombre)}</td>
         <td>${escapeHtml(t.mejor_vuelta)}</td>
         <td>${escapeHtml(t.tiempo_total)}</td>

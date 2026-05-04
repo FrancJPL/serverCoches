@@ -3,6 +3,8 @@ const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+
 
 const app = express();
 const PORT = 3000;
@@ -10,6 +12,21 @@ const PORT = 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Rate Limiting: 1 petición cada 5 segundos por IP
+const limiter = rateLimit({
+    windowMs: 5 * 1000, // 5 segundos
+    max: 1, // 1 petición por ventana
+    message: { error: 'Demasiadas peticiones. Por favor, espera 5 segundos.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Aplicamos el limitador a los endpoints de guardado y auth para no bloquear la carga de la web estática
+app.use('/save_time', limiter);
+app.use('/register', limiter);
+app.use('/login', limiter);
+
 
 // Servir archivos estáticos (para la página web)
 app.use(express.static('public'));
@@ -158,13 +175,18 @@ app.post('/save_time', (req, res) => {
     });
 });
 
-// Obtener todos los tiempos (ordenados por mejor vuelta)
-app.get('/times', (req, res) => {
+// Obtener todos los tiempos (con ranking global calculado)
+// Aplicamos el limitador también aquí para evitar abusos
+app.get('/times', limiter, (req, res) => {
     db.all(`
-        SELECT * FROM tiempos 
-        ORDER BY 
-            CAST(substr(mejor_vuelta, 1, 2) AS INTEGER) * 60 + 
-            CAST(substr(mejor_vuelta, 4, 6) AS REAL) ASC
+        SELECT *, 
+        RANK() OVER (
+            ORDER BY 
+                CAST(substr(mejor_vuelta, 1, 2) AS INTEGER) * 60 + 
+                CAST(substr(mejor_vuelta, 4, 6) AS REAL) ASC
+        ) as rank_total
+        FROM tiempos 
+        ORDER BY rank_total ASC
     `, (err, rows) => {
         if (err) {
             res.status(500).json({ error: err.message });
@@ -173,6 +195,7 @@ app.get('/times', (req, res) => {
         }
     });
 });
+
 
 // Iniciar servidor
 app.listen(PORT, () => {
