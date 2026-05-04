@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = 3000;
 
 // Middleware
@@ -16,7 +17,7 @@ app.use(express.json());
 // Rate Limiting: 1 petición cada 5 segundos por IP
 const limiter = rateLimit({
     windowMs: 5 * 1000, // 5 segundos
-    max: 1, // 1 petición por ventana
+    max: 5, // 1 petición por ventana
     message: { error: 'Demasiadas peticiones. Por favor, espera 5 segundos.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -80,8 +81,8 @@ app.post('/register', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const stmt = db.prepare(`INSERT INTO usuarios (nombre, password) VALUES (?, ?)`);
-        
-        stmt.run([username, hashedPassword], function(err) {
+
+        stmt.run([username, hashedPassword], function (err) {
             if (err) {
                 if (err.message.includes('UNIQUE constraint failed')) {
                     return res.status(400).json({ error: 'El nombre de usuario ya existe' });
@@ -133,7 +134,7 @@ app.post('/save_time', (req, res) => {
     // 1. Verificar si el usuario está logueado (status = 1)
     db.get(`SELECT status FROM usuarios WHERE nombre = ?`, [name], (err, user) => {
         if (err) return res.status(500).json({ error: err.message });
-        
+
         if (!user || user.status !== 1) {
             return res.status(403).json({ error: 'Debes iniciar sesión para guardar tiempos' });
         }
@@ -201,4 +202,4 @@ app.get('/times', limiter, (req, res) => {
 app.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
     console.log(`📊 Ver ranking: http://localhost:${PORT}/ranking.html`);
-});
+});
